@@ -1,0 +1,14 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/go",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.go",
+                "ms-vscode.makefile-tools",
+                "zxh404.vscode-proto3"
+            ]
+        }
+    },
+    "postCreateCommand": "go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest"
+}
+

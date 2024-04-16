@@ -1,0 +1,41 @@
+controller:
+  enabled: false
+agent:
+  enabled: false
+useLatestContainers: false
+rbac:
+  enabled: false
+webhookConfiguration:
+  enabled: false
+custom:
+  configuration:
+    enabled: true
+    name: http-range-switch # The name of akric
+    capacity: 2
+    discoveryHandlerName: go-http-rangeswitch # This must be "go-http-range$SUFFIX", where $SUFFIX is defined in custom.discovery.suffix (L37)
+    discoveryDetails: |
+      ipStart: 10.96.1.1
+      ipEnd: 10.96.1.255
+      deviceType: switch
+    brokerPod:
+      image:
+        repository: gntouts/akri-example-broker
+        tag: aba58b6
+    brokerProperties:
+      DEVICE: switch
+        #FIRMWARE: harbor.nbfc.io/nubificus/picow-blink:e79e0c7
+      FIRMWARE: harbor.nbfc.io/nubificus/picow-blink:422d9c2
+      AUTH_USER: ananos
+      AUTH_PASS: paparia
+    firmwareJob:
+      image:
+        repository: harbor.nbfc.io/nubificus/picow-ota
+        tag: 1cabac8
+
+  discovery:
+    enabled: true
+    suffix: switch
+    image:
+      repository: docker.io/gntouts/akri-discovery-handler-go
+      tag: vv009
+    name: http-discovery-switch
