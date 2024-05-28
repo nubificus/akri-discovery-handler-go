@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/nubificus/akri-discovery-handler-go/pkg/pb"
 	"github.com/nubificus/akri-discovery-handler-go/pkg/utils"
@@ -25,6 +24,7 @@ var (
 	discoveryHandlerName        string
 	discoveryServiceSocketPath  string
 )
+var registerChan = make(chan bool, 1)
 
 func init() {
 	envVar := os.Getenv("DISCOVERY_HANDLER_SUFFIX")
@@ -51,13 +51,14 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// periodically re-register
+		// re-register when channel receives message
 		for {
 			err := utils.RegisterDiscoveryHandler(agentRegistrationSocketPath, discoveryHandlerName, discoveryServiceSocketPath)
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			time.Sleep(20 * time.Second)
+			<-registerChan
+			fmt.Println("received message to re-register")
 		}
 
 	}()
