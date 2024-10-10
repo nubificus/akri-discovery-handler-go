@@ -113,6 +113,9 @@ func scanDevice(ip string, expected string) Device {
 	url := fmt.Sprintf("http://%s/device", ip)
 	client := http.Client{
 		Timeout: 3 * time.Second,
+		Transport: &http.Transport{
+			DisableKeepAlives: true, // Prevents connection reuse
+		},
 	}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -126,6 +129,7 @@ func scanDevice(ip string, expected string) Device {
 		return dev
 	}
 	if string(body) == expected {
+		fmt.Printf("discovered device %s with type %s\n", ip, string(body))
 		dev.Discovered = true
 	}
 	return dev

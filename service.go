@@ -24,6 +24,8 @@ func (s *server) Discover(req *pb.DiscoverRequest, stream pb.DiscoveryHandler_Di
 	fmt.Println("parsed discovery details")
 
 	for {
+		fmt.Println("entered discovery loop")
+		startTime := time.Now()
 		successIPs, err := discoveryDetails.Scan()
 		if err != nil {
 			fmt.Println("error scanning ip range: ", err.Error())
@@ -59,13 +61,18 @@ func (s *server) Discover(req *pb.DiscoverRequest, stream pb.DiscoveryHandler_Di
 			registerChan <- true
 			return err
 		}
+		endTime := time.Now()
+		elapsedTime := endTime.Sub(startTime).Seconds()
+		fmt.Printf("Elapsed time: %.2f seconds\n", elapsedTime)
 
 		if len(devices) == 0 {
+			fmt.Println("No devices were discovered. Sleeping for 15 seconds")
+
 			time.Sleep(15 * time.Second)
 			continue
 		}
-
-		time.Sleep(60 * time.Second)
+		fmt.Println("devices returned successfully! sleeping for 30 seconds")
+		time.Sleep(30 * time.Second)
 	}
 }
 
