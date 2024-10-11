@@ -9,6 +9,7 @@ A [Dockerfile](./Dockerfile) is provided to facilitate the building process of t
 ```bash
 docker build -t akri-discovery-handler-go:latest .
 docker build --push -t gntouts/akri-discovery-handler-go:scenario2 .
+docker build --push -t gntouts/akri-discovery-handler-go:v0.2.0 .
 ```
 
 You can then push the image to any container registry.

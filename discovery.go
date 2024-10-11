@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 type Device struct {
 	Hostname   string
 	Discovered bool
+	Info       DeviceInfo
 }
 type DiscoveredDevices struct {
 	sync.Mutex
@@ -84,7 +86,7 @@ type DiscoveryRequest struct {
 	DeviceType string
 }
 
-func (details DiscoveryDetails) Scan() ([]string, error) {
+func (details DiscoveryDetails) Scan() ([]Device, error) {
 	maxConcurrency := 10
 	ipAddresses, err := details.IPList()
 	if err != nil {
@@ -95,14 +97,20 @@ func (details DiscoveryDetails) Scan() ([]string, error) {
 		res := scanDevice(ip, details.DeviceType)
 		return res
 	})
-	successIPs := []string{}
+	successIPs := []Device{}
 	for _, res := range resultIPs {
 		if res.Discovered {
-			successIPs = append(successIPs, res.Hostname)
+			successIPs = append(successIPs, res)
 		}
 	}
 	fmt.Println("Scanned devices:", successIPs)
 	return successIPs, nil
+}
+
+type DeviceInfo struct {
+	Device      string `json:"device"`
+	Application string `json:"application"`
+	Version     string `json:"version"`
 }
 
 func scanDevice(ip string, expected string) Device {
@@ -110,7 +118,8 @@ func scanDevice(ip string, expected string) Device {
 		Hostname:   ip,
 		Discovered: false,
 	}
-	url := fmt.Sprintf("http://%s/device", ip)
+
+	url := fmt.Sprintf("http://%s/info", ip)
 	client := http.Client{
 		Timeout: 3 * time.Second,
 		Transport: &http.Transport{
@@ -128,9 +137,17 @@ func scanDevice(ip string, expected string) Device {
 		// fmt.Printf("Error reading response body from %s: %v\n", url, err)
 		return dev
 	}
-	if string(body) == expected {
-		fmt.Printf("discovered device %s with type %s\n", ip, string(body))
+	// Parse the JSON response
+	var deviceInfo DeviceInfo
+	err = json.Unmarshal(body, &deviceInfo)
+	if err != nil {
+		// fmt.Printf("Error parsing JSON from %s: %v\n", url, err)
+		return dev
+	}
+	if deviceInfo.Application == expected {
+		fmt.Printf("Discovered device %s with type %s\n", ip, deviceInfo.Application)
 		dev.Discovered = true
+		dev.Info = deviceInfo // Store the parsed information
 	}
 	return dev
 }

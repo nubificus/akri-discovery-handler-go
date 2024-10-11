@@ -39,8 +39,8 @@ func (s *server) Discover(req *pb.DiscoverRequest, stream pb.DiscoveryHandler_Di
 		}
 
 		var devices []*pb.Device
-		for _, deviceIp := range successIPs {
-			devices = append(devices, toProtobufDevice(deviceIp))
+		for _, device := range successIPs {
+			devices = append(devices, toProtobufDevice(device))
 		}
 
 		// if len(devices) == 0 {
@@ -76,12 +76,15 @@ func (s *server) Discover(req *pb.DiscoverRequest, stream pb.DiscoveryHandler_Di
 	}
 }
 
-func toProtobufDevice(input string) *pb.Device {
+func toProtobufDevice(input Device) *pb.Device {
 	return &pb.Device{
-		Id: input,
+		Id: input.Hostname,
 		Properties: map[string]string{
-			"AKRI_HTTP":     "http",
-			"HOST_ENDPOINT": input,
+			"AKRI_HTTP":        "http",
+			"HOST_ENDPOINT":    input.Hostname,
+			"APPLICATION_TYPE": input.Info.Application,
+			"DEVICE":           input.Info.Device,
+			"VERSION":          input.Info.Version,
 		},
 		Mounts:      []*pb.Mount{},
 		DeviceSpecs: []*pb.DeviceSpec{},
