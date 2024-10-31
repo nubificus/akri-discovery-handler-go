@@ -25,9 +25,9 @@ type DiscoveredDevices struct {
 }
 
 type DiscoveryDetails struct {
-	IPStart    string
-	IPEnd      string
-	DeviceType string
+	IPStart     string
+	IPEnd       string
+	Application string
 }
 
 func NewDiscoveryDetails(input string) (DiscoveryDetails, error) {
@@ -46,13 +46,13 @@ func NewDiscoveryDetails(input string) (DiscoveryDetails, error) {
 			details.IPStart = parts[1]
 		case "ipEnd":
 			details.IPEnd = parts[1]
-		case "deviceType":
-			details.DeviceType = parts[1]
+		case "applicationType":
+			details.Application = parts[1]
 		default:
 			return details, errors.New("unknown field in input")
 		}
 	}
-	if details.IPStart == "" || details.IPEnd == "" || details.DeviceType == "" {
+	if details.IPStart == "" || details.IPEnd == "" || details.Application == "" {
 		return details, errors.New("missing fields in input")
 	}
 	return details, nil
@@ -94,7 +94,7 @@ func (details DiscoveryDetails) Scan() ([]Device, error) {
 	}
 
 	resultIPs := parallel.MapLimit(ipAddresses, maxConcurrency, func(ip string) Device {
-		res := scanDevice(ip, details.DeviceType)
+		res := scanDevice(ip, details.Application)
 		return res
 	})
 	successIPs := []Device{}
