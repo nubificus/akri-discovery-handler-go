@@ -3,6 +3,6 @@ WORKDIR /app
 COPY . .
 RUN go mod tidy && go build
 
-FROM gcr.io/distroless/static-debian12:latest
+FROM docker.io/library/ubuntu:latest
 COPY --from=builder /app/akri-discovery-handler-go /akri-discovery-handler-go
 ENTRYPOINT ["/akri-discovery-handler-go"]
