@@ -24,6 +24,10 @@ func (s *server) Discover(req *pb.DiscoverRequest, stream pb.DiscoveryHandler_Di
 	fmt.Println("parsed discovery details")
 
 	for {
+		// the operationMode will switch to 0 if we receive a kill signal
+		if operationMode != 1 {
+			break
+		}
 		fmt.Println("entered discovery loop")
 		startTime := time.Now()
 		successIPs, err := discoveryDetails.Scan()
@@ -72,8 +76,14 @@ func (s *server) Discover(req *pb.DiscoverRequest, stream pb.DiscoveryHandler_Di
 			continue
 		}
 		fmt.Println("devices returned successfully! sleeping for 30 seconds")
-		time.Sleep(30 * time.Second)
+		time.Sleep(sleepDuration)
 	}
+
+	fmt.Println("sending empty device list before shutdown")
+	res := &pb.DiscoverResponse{
+		Devices: []*pb.Device{},
+	}
+	return stream.Send(res)
 }
 
 func toProtobufDevice(input Device) *pb.Device {

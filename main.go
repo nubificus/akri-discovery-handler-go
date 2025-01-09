@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/nubificus/akri-discovery-handler-go/pkg/pb"
 	"github.com/nubificus/akri-discovery-handler-go/pkg/utils"
@@ -25,6 +26,9 @@ var (
 	discoveryServiceSocketPath  string
 )
 var registerChan = make(chan bool, 1)
+var operationMode = 1
+
+const sleepDuration = 30 * time.Second
 
 func init() {
 	envVar := os.Getenv("DISCOVERY_HANDLER_SUFFIX")
@@ -86,10 +90,19 @@ func main() {
 	signal.Notify(sig, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 
-	log.Println("Shutting down server...")
-	grpcServer.GracefulStop()
-	log.Println("Server gracefully stopped")
-	// wg.Wait()
+	operationMode = 0
+	log.Println("Switched operation mode. Sending empty list on next iteration...")
+	time.Sleep(sleepDuration * 2)
+
+	go func() {
+		log.Println("Shutting down server...")
+		grpcServer.GracefulStop()
+		fmt.Println("Server gracefully stopped")
+		os.Exit(0)
+	}()
+	time.Sleep(sleepDuration)
+	grpcServer.Stop()
+	fmt.Println("Server forcefully stopped")
 }
 
 func dumpEnvs() {
