@@ -25,16 +25,17 @@ var (
 	discoveryHandlerName        string
 	discoveryServiceSocketPath  string
 )
+
 var registerChan = make(chan bool, 1)
 var operationMode = 1
 
 const sleepDuration = 30 * time.Second
 
 func init() {
-	envVar := os.Getenv("DISCOVERY_HANDLER_SUFFIX")
-	discoveryHandlerName = fmt.Sprintf("%s%s", discoveryHandlerPrefix, envVar)
+	dumpEnvs()
+	discoveryHandlerName = getDHName()
 
-	envVar = os.Getenv("DISCOVERY_HANDLERS_DIRECTORY")
+	envVar := os.Getenv("DISCOVERY_HANDLERS_DIRECTORY")
 	if envVar == "" {
 		envVar = "/var/lib/akri"
 	}
@@ -48,7 +49,6 @@ func main() {
 	fmt.Println("Agent Registration Socket: ", agentRegistrationSocketPath)
 	fmt.Println("Discovery Handler Complete Name: ", discoveryHandlerName)
 	fmt.Println("Discovery Service Socket: ", discoveryServiceSocketPath)
-	dumpEnvs()
 
 	var wg sync.WaitGroup
 	// Register with agent
@@ -118,4 +118,14 @@ func dumpEnvs() {
 	for key, value := range envMap {
 		fmt.Printf("%s=%s\n", key, value)
 	}
+}
+
+func getDHName() string {
+	hostname := os.Getenv("HOSTNAME")
+	parts := strings.Split(hostname, "-")
+	validIndex := len(parts) - 2
+	if len(parts) > 2 {
+		return strings.Join(parts[:validIndex], "-")
+	}
+	return discoveryHandlerPrefix
 }
