@@ -12,7 +12,7 @@ custom:
     enabled: true
     name: http-range-switch # The name of akric
     capacity: 2
-    discoveryHandlerName: go-http-range
+    discoveryHandlerName: http-discovery-switch # name of discovery handler, must be unique and matching discovery.name. will be used for socket creation
     discoveryDetails: |
       ipStart: 192.168.11.36
       ipEnd: 192.168.11.45
@@ -25,5 +25,5 @@ custom:
     enabled: true
     image:
       repository: harbor.nbfc.io/nubificus/iot/akri-discovery-handler-go
-      tag: debug2025-1
+      tag: 4a42dab
     name: http-discovery-switch # name of discovery handler, must be unique and matching custom.configuration.discoveryHandlerName
