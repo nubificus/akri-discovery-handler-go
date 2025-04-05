@@ -13,10 +13,11 @@ custom:
     name: http-range-switch # The name of akric
     capacity: 2
     discoveryHandlerName: http-discovery-switch # name of discovery handler, must be unique and matching discovery.name. will be used for socket creation
-    discoveryDetails: |
+    discoveryDetails: | # make sure this is valid YAML
       ipStart: 192.168.11.36
       ipEnd: 192.168.11.45
       applicationType: fmnist
+      secure: true
     brokerPod:
       image:
         repository: gntouts/akri-example-broker

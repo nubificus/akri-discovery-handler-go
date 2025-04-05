@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/smirzaei/parallel"
+	"gopkg.in/yaml.v3"
 )
 
 type Device struct {
@@ -25,35 +25,29 @@ type DiscoveredDevices struct {
 }
 
 type DiscoveryDetails struct {
-	IPStart     string
-	IPEnd       string
-	Application string
+	IPStart     string `yaml:"ipStart"`
+	IPEnd       string `yaml:"ipEnd"`
+	Application string `yaml:"applicationType"`
+	Secure      bool   `yaml:"secure"`
+}
+
+func (d *DiscoveryDetails) UnmarshalYAML(value *yaml.Node) error {
+	type rawDetails DiscoveryDetails
+	raw := rawDetails{
+		Secure: true, // Set default value if secure is not provided
+	}
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	*d = DiscoveryDetails(raw)
+	return nil
 }
 
 func NewDiscoveryDetails(input string) (DiscoveryDetails, error) {
-	details := DiscoveryDetails{}
-	lines := strings.Split(input, "\n")
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		parts := strings.SplitN(line, ": ", 2)
-		if len(parts) != 2 {
-			return details, errors.New("invalid input format")
-		}
-		switch parts[0] {
-		case "ipStart":
-			details.IPStart = parts[1]
-		case "ipEnd":
-			details.IPEnd = parts[1]
-		case "applicationType":
-			details.Application = parts[1]
-		default:
-			return details, errors.New("unknown field in input")
-		}
-	}
-	if details.IPStart == "" || details.IPEnd == "" || details.Application == "" {
-		return details, errors.New("missing fields in input")
+	var details DiscoveryDetails
+	err := yaml.Unmarshal([]byte(input), &details)
+	if err != nil {
+		return details, err
 	}
 	return details, nil
 }
@@ -94,7 +88,7 @@ func (details DiscoveryDetails) Scan() ([]Device, error) {
 	}
 
 	resultIPs := parallel.MapLimit(ipAddresses, maxConcurrency, func(ip string) Device {
-		res := scanDevice(ip, details.Application)
+		res := scanDevice(ip, details.Application, details.Secure)
 		return res
 	})
 	successIPs := []Device{}
@@ -113,7 +107,7 @@ type DeviceInfo struct {
 	Version     string `json:"version"`
 }
 
-func scanDevice(ip string, expected string) Device {
+func scanDevice(ip string, expected string, secure bool) Device {
 	dev := Device{
 		Hostname:   ip,
 		Discovered: false,
@@ -144,10 +138,22 @@ func scanDevice(ip string, expected string) Device {
 		// fmt.Printf("Error parsing JSON from %s: %v\n", url, err)
 		return dev
 	}
-	if deviceInfo.Application == expected {
-		fmt.Printf("Discovered device %s with type %s\n", ip, deviceInfo.Application)
+	if deviceInfo.Application != expected {
+		return dev
+	}
+
+	if secure {
+		trusted := VerifyDevice(ip)
+		if !trusted {
+			fmt.Printf("Device %s is not trusted\n", ip)
+			return dev
+		}
 		dev.Discovered = true
 		dev.Info = deviceInfo // Store the parsed information
+		return dev
 	}
+
+	dev.Discovered = true
+	dev.Info = deviceInfo // Store the parsed information
 	return dev
 }

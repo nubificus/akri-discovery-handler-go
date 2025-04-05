@@ -6,6 +6,7 @@ require (
 	github.com/smirzaei/parallel v1.1.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 )
 
 require (
