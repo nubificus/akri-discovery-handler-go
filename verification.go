@@ -72,7 +72,7 @@ func GetAttestationServer() string {
 }
 
 func VerifyDevice(ip string) bool {
-	endpoint := fmt.Sprintf("http://%s/oboard", ip)
+	endpoint := fmt.Sprintf("http://%s/onboard", ip)
 	derData, err := GetDerData(endpoint)
 	if err != nil {
 		return false

@@ -12,8 +12,6 @@ type server struct {
 }
 
 func (s *server) Discover(req *pb.DiscoverRequest, stream pb.DiscoveryHandler_DiscoverServer) error {
-	// Implement your discovery logic here
-	// For demonstration, let's just send a single device in response
 	fmt.Println("gRPC call to server.Discover()")
 	fmt.Println(req.DiscoveryDetails)
 	discoveryDetails, err := NewDiscoveryDetails(req.DiscoveryDetails)

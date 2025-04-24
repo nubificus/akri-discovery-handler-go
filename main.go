@@ -57,10 +57,13 @@ func main() {
 		defer wg.Done()
 		// re-register when channel receives message
 		for {
+			fmt.Println("Registering with agent...")
 			err := utils.RegisterDiscoveryHandler(agentRegistrationSocketPath, discoveryHandlerName, discoveryServiceSocketPath)
 			if err != nil {
+				fmt.Println("Error registering with agent:", err)
 				log.Fatal(err.Error())
 			}
+			fmt.Println("Registered with agent")
 			<-registerChan
 			fmt.Println("received message to re-register")
 		}
