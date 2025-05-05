@@ -86,5 +86,9 @@ func VerifyDevice(ip string) bool {
 		return false
 	}
 	err = VerifyCertificate(pemData, attestationServer)
-	return err == nil
+	if err != nil {
+		fmt.Printf("Error verifying certificate: %v\n", err)
+		return false
+	}
+	return true
 }
