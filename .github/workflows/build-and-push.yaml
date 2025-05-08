@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - automate_image_build
+      - automate_image_build_fix_attestation
   pull_request:
     branches:
       - main
