@@ -19,6 +19,7 @@ type Device struct {
 	Discovered bool
 	Info       DeviceInfo
 }
+
 type DiscoveredDevices struct {
 	sync.Mutex
 	Devices []string
@@ -68,7 +69,6 @@ func (details DiscoveryDetails) IPList() ([]string, error) {
 		return nil, err
 	}
 	for i := startInt; i <= endInt; i++ {
-		// target := fmt.Sprintf("http://%s%d/device", prefix, i)
 		target := fmt.Sprintf("%s%d", prefix, i)
 		ips = append(ips, target)
 	}
@@ -80,6 +80,19 @@ type DiscoveryRequest struct {
 	DeviceType string
 }
 
+// DeviceState keeps track of probe status and retry timing.
+type DeviceState struct {
+	LastSeen     time.Time
+	NextProbeDue time.Time
+	Backoff      time.Duration
+	Discovered   bool
+}
+
+var (
+	deviceStates   = make(map[string]*DeviceState)
+	deviceStatesMu sync.Mutex
+)
+
 func (details DiscoveryDetails) Scan() ([]Device, error) {
 	maxConcurrency := 10
 	ipAddresses, err := details.IPList()
@@ -87,10 +100,46 @@ func (details DiscoveryDetails) Scan() ([]Device, error) {
 		return nil, err
 	}
 
+	now := time.Now()
 	resultIPs := parallel.MapLimit(ipAddresses, maxConcurrency, func(ip string) Device {
+		deviceStatesMu.Lock()
+		state, exists := deviceStates[ip]
+		if !exists {
+			state = &DeviceState{
+				Backoff:      10 * time.Second,
+				NextProbeDue: now,
+			}
+			deviceStates[ip] = state
+		}
+		if now.Before(state.NextProbeDue) {
+			deviceStatesMu.Unlock()
+			return Device{Hostname: ip, Discovered: state.Discovered}
+		}
+		deviceStatesMu.Unlock()
+
 		res := scanDevice(ip, details.Application, details.Secure)
+
+		deviceStatesMu.Lock()
+		defer deviceStatesMu.Unlock()
+		if res.Discovered {
+			state.LastSeen = now
+			state.Backoff = 10 * time.Second
+			state.NextProbeDue = now.Add(state.Backoff)
+			state.Discovered = true
+		} else {
+			// exponential backoff capped at 5 min
+			if state.Backoff < 5*time.Minute {
+				state.Backoff *= 2
+				if state.Backoff > 5*time.Minute {
+					state.Backoff = 5 * time.Minute
+				}
+			}
+			state.NextProbeDue = now.Add(state.Backoff)
+			state.Discovered = false
+		}
 		return res
 	})
+
 	successIPs := []Device{}
 	for _, res := range resultIPs {
 		if res.Discovered {
@@ -117,25 +166,21 @@ func scanDevice(ip string, expected string, secure bool) Device {
 	client := http.Client{
 		Timeout: 3 * time.Second,
 		Transport: &http.Transport{
-			DisableKeepAlives: true, // Prevents connection reuse
+			DisableKeepAlives: true,
 		},
 	}
 	resp, err := client.Get(url)
 	if err != nil {
-		// fmt.Printf("Error fetching %s: %v\n", url, err)
 		return dev
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		// fmt.Printf("Error reading response body from %s: %v\n", url, err)
 		return dev
 	}
-	// Parse the JSON response
 	var deviceInfo DeviceInfo
 	err = json.Unmarshal(body, &deviceInfo)
 	if err != nil {
-		// fmt.Printf("Error parsing JSON from %s: %v\n", url, err)
 		return dev
 	}
 	if deviceInfo.Application != expected {
@@ -149,11 +194,11 @@ func scanDevice(ip string, expected string, secure bool) Device {
 			return dev
 		}
 		dev.Discovered = true
-		dev.Info = deviceInfo // Store the parsed information
+		dev.Info = deviceInfo
 		return dev
 	}
 
 	dev.Discovered = true
-	dev.Info = deviceInfo // Store the parsed information
+	dev.Info = deviceInfo
 	return dev
 }
